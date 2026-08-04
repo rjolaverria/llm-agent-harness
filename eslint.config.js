@@ -6,7 +6,13 @@ export default tseslint.config(
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
-    rules: { curly: ['error', 'all'] },
+    rules: {
+      curly: ['error', 'all'],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
   },
   { files: ['**/*.js', '**/*.config.ts'], extends: [tseslint.configs.disableTypeChecked] },
   { files: ['test/**/*.ts'], extends: [tseslint.configs.disableTypeChecked] },
