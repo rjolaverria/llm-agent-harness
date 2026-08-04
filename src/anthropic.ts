@@ -1,0 +1,42 @@
+// Reference binding for @anthropic-ai/sdk (type-only optional peer dependency).
+// ~60 lines — copy it and own it if you'd rather not depend on this subpath.
+import type Anthropic from '@anthropic-ai/sdk';
+import type { ProviderBinding, ToolResultItem } from './types.js';
+import type { AnyToolDefinition } from './tool.js';
+
+export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.MessageParam> = {
+  extractToolCalls(response) {
+    return response.content
+      .filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use')
+      .map((block) => ({ toolCallId: block.id, toolName: block.name, rawArgs: block.input }));
+  },
+
+  isDone(response) {
+    return response.stop_reason === 'end_turn';
+  },
+
+  toAssistantMessage(response) {
+    return { role: 'assistant', content: response.content };
+  },
+
+  toToolResultMessage(results: ToolResultItem[]) {
+    return {
+      role: 'user',
+      content: results.map((r) => ({
+        type: 'tool_result' as const,
+        tool_use_id: r.toolCallId,
+        content: r.result,
+        ...(r.isError ? { is_error: true } : {}),
+      })),
+    };
+  },
+};
+
+/** Map harness tool definitions to Anthropic's wire format for your own messages.create call. */
+export function toAnthropicTools(tools: readonly AnyToolDefinition[]): Anthropic.Tool[] {
+  return tools.map((t) => ({
+    name: t.name,
+    description: t.description,
+    input_schema: t.jsonSchema as Anthropic.Tool.InputSchema,
+  }));
+}
