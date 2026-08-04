@@ -13,5 +13,8 @@ export default tseslint.config(
   },
   { files: ['**/*.js', '**/*.config.ts'], extends: [tseslint.configs.disableTypeChecked] },
   { files: ['test/**/*.ts'], extends: [tseslint.configs.disableTypeChecked] },
+  // Type-checked separately via `tsc -p tsconfig.examples.json` (README snippet
+  // verification); not part of the root tsconfig's project service.
+  { files: ['examples/**/*.ts'], extends: [tseslint.configs.disableTypeChecked] },
   { ignores: ['dist/', 'coverage/', 'docs/'] },
 );
