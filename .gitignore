@@ -4,3 +4,5 @@ coverage/
 docs/
 .env
 .superpowers/
+# roborev snapshots
+/.roborev/
