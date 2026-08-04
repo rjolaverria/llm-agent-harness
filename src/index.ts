@@ -7,3 +7,11 @@ export {
   type ToolDefinition,
   type ValidateResult,
 } from './tool.js';
+export {
+  runAgent,
+  type AgentStep,
+  type BeforeToolCallOutcome,
+  type RunAgentOptions,
+  type RunAgentReason,
+  type RunAgentResult,
+} from './run.js';
