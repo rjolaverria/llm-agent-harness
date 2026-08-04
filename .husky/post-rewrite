@@ -1,1 +1,7 @@
-roborev post-commit 2>/dev/null || true
+# git feeds "<old-sha> <new-sha>" lines on stdin, one per rewritten commit;
+# enqueue a review for each rewritten commit, not just HEAD.
+while read -r _old new _rest; do
+  if [ -n "$new" ]; then
+    roborev review "$new" > /dev/null 2>&1 || true
+  fi
+done
