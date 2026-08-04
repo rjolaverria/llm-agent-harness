@@ -9,5 +9,6 @@ export default tseslint.config(
     rules: { curly: ['error', 'all'] },
   },
   { files: ['**/*.js', '**/*.config.ts'], extends: [tseslint.configs.disableTypeChecked] },
+  { files: ['test/**/*.ts'], extends: [tseslint.configs.disableTypeChecked] },
   { ignores: ['dist/', 'coverage/', 'docs/'] },
 );
