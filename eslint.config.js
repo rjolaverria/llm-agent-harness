@@ -8,10 +8,7 @@ export default tseslint.config(
     },
     rules: {
       curly: ['error', 'all'],
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
-      ],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
   { files: ['**/*.js', '**/*.config.ts'], extends: [tseslint.configs.disableTypeChecked] },
