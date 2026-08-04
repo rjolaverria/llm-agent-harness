@@ -1,0 +1,100 @@
+{
+  "name": "llm-agent-harness",
+  "version": "0.1.0",
+  "description": "Minimal tool-loop harness for LLM agents. Keep your provider SDK, keep your messages, add a correct tool loop.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./anthropic": {
+      "types": "./dist/anthropic.d.ts",
+      "import": "./dist/anthropic.js"
+    },
+    "./openai": {
+      "types": "./dist/openai.d.ts",
+      "import": "./dist/openai.js"
+    },
+    "./gemini": {
+      "types": "./dist/gemini.d.ts",
+      "import": "./dist/gemini.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "prepublishOnly": "npm run build",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,js}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
+  "dependencies": {
+    "llm-agent-loop": "^2.0.0"
+  },
+  "peerDependencies": {
+    "@anthropic-ai/sdk": ">=0.39.0",
+    "@google/genai": ">=1.0.0",
+    "openai": ">=4.60.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/sdk": {
+      "optional": true
+    },
+    "@google/genai": {
+      "optional": true
+    },
+    "openai": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@anthropic-ai/sdk": "^0.115.0",
+    "@google/genai": "^2.15.0",
+    "@standard-schema/spec": "^1.1.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "eslint": "^10.8.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "openai": "^7.4.0",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.66.0",
+    "vitest": "^4.1.10",
+    "zod": "^4.4.3"
+  },
+  "keywords": [
+    "llm",
+    "agent",
+    "tool-use",
+    "tool-calling",
+    "harness",
+    "anthropic",
+    "openai",
+    "gemini",
+    "typescript"
+  ],
+  "author": "Rafi Olaverria",
+  "license": "ISC",
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}
