@@ -343,7 +343,11 @@ function tool<TSchema extends StandardSchemaV1>(def: {
   carries no JSON Schema, and generating one from an arbitrary validator would
   mean depending on a specific one. For Zod v4 this is a one-liner:
   `jsonSchema: z.toJSONSchema(schema)`. This keeps the harness at zero runtime
-  dependencies beyond `llm-agent-loop`, at the cost of one explicit field.
+  dependencies except `llm-agent-loop` (plus the types-only
+  `@standard-schema/spec`, which ships as a regular `dependencies` entry so
+  consumers' TypeScript can resolve the `StandardSchemaV1` types our own
+  `dist/*.d.ts` reference, but contributes no runtime code), at the cost of
+  one explicit field.
 - `execute`'s return value: a `string` passes through untouched; `undefined`
   becomes `''`; anything else is `JSON.stringify`'d. Thrown errors never
   escape — see the error-handling table below.

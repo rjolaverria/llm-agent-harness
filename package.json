@@ -48,6 +48,7 @@
     ]
   },
   "dependencies": {
+    "@standard-schema/spec": "^1.1.0",
     "llm-agent-loop": "^2.0.0"
   },
   "peerDependencies": {
@@ -69,7 +70,6 @@
   "devDependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
     "@google/genai": "^2.15.0",
-    "@standard-schema/spec": "^1.1.0",
     "@vitest/coverage-v8": "^4.1.10",
     "eslint": "^10.8.0",
     "husky": "^9.1.7",
