@@ -22,7 +22,17 @@ export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.Mess
   },
 
   toAssistantMessage(response) {
-    return { role: 'assistant', content: response.content };
+    // Only a stop_reason of 'tool_use' means every tool_use block in this
+    // response was actually extracted and executed (see extractToolCalls
+    // above). On any other stop reason, folding a tool_use block into history
+    // would leave an unanswered tool call behind — Anthropic rejects that on
+    // the next request — so it's filtered out here too, keeping text/other
+    // blocks.
+    const content =
+      response.stop_reason === 'tool_use'
+        ? response.content
+        : response.content.filter((block) => block.type !== 'tool_use');
+    return { role: 'assistant', content };
   },
 
   toToolResultMessage(results: ToolResultItem[]) {

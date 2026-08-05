@@ -62,6 +62,20 @@ describe('anthropicBinding', () => {
     });
   });
 
+  it('drops tool_use blocks when folding an abnormal finish, keeping text blocks', () => {
+    expect(anthropicBinding.toAssistantMessage(maxTokensWithToolUse)).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'Let me check.', citations: null }],
+    });
+  });
+
+  it('drops tool_use blocks when folding a refusal, keeping text blocks', () => {
+    expect(anthropicBinding.toAssistantMessage(refusalWithToolUse)).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: 'Let me check.', citations: null }],
+    });
+  });
+
   it('formats tool results as a single user message with tool_result blocks', () => {
     const msg = anthropicBinding.toToolResultMessage([
       { toolCallId: 'toolu_1', toolName: 'get_weather', result: '72°F', isError: false },

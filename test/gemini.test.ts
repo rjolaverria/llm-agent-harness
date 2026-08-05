@@ -26,6 +26,14 @@ const malformedFunctionCall = response(
   'MALFORMED_FUNCTION_CALL',
 );
 
+const maxTokensWithTextAndFunctionCall = response(
+  [
+    { text: 'Let me check.' },
+    { functionCall: { id: 'fc_1', name: 'get_weather', args: { location: 'SF' } } },
+  ],
+  'MAX_TOKENS',
+);
+
 describe('geminiBinding', () => {
   it('extracts functionCall parts', () => {
     expect(geminiBinding.extractToolCalls(toolCallResponse)).toEqual([
@@ -56,6 +64,24 @@ describe('geminiBinding', () => {
     const msg = geminiBinding.toAssistantMessage(toolCallResponse);
     expect(msg.role).toBe('model');
     expect(msg.parts).toHaveLength(1);
+  });
+
+  it('drops functionCall parts when folding an abnormal finish, keeping text parts', () => {
+    const msg = geminiBinding.toAssistantMessage(maxTokensWithTextAndFunctionCall);
+    expect(msg).toEqual({ role: 'model', parts: [{ text: 'Let me check.' }] });
+  });
+
+  it('falls back to a single empty text part when an abnormal finish leaves nothing after filtering', () => {
+    const msg = geminiBinding.toAssistantMessage(maxTokensWithFunctionCall);
+    expect(msg).toEqual({ role: 'model', parts: [{ text: '' }] });
+  });
+
+  it('folds a non-empty single text part when candidates are empty', () => {
+    const empty = { candidates: [] } as unknown as GenerateContentResponse;
+    expect(geminiBinding.toAssistantMessage(empty)).toEqual({
+      role: 'model',
+      parts: [{ text: '' }],
+    });
   });
 
   it('formats tool results as functionResponse parts in one user message', () => {

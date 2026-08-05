@@ -203,6 +203,9 @@ export async function runAgent<TResponse, TMessage>(
         await onStep({
           turn: loopResult.iterations,
           response,
+          // Reported for observability only — terminal turns never run
+          // tools, so any calls extracted here (e.g. from an abnormal finish
+          // that happens to carry a tool-call shape) are unexecuted.
           toolCalls: binding.extractToolCalls(response),
           toolResults: [],
           willStop: true,

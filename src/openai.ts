@@ -50,11 +50,16 @@ export const openaiBinding: ProviderBinding<
 
   toAssistantMessage(response) {
     const message = response.choices[0]?.message;
-    // Only fold function-type tool_calls, matching what executeToolCall
-    // actually runs. Custom-tool calls are filtered out of execution, so
-    // echoing them here would leave an unanswered tool_call_id in the
-    // transcript and make the next API request invalid.
-    const functionToolCalls = message?.tool_calls?.filter(isFunctionToolCall) ?? [];
+    // Only fold tool_calls when finish_reason === 'tool_calls' — the same
+    // gate extractToolCalls uses — and, within that, only function-type
+    // calls, matching what executeToolCall actually runs. Any tool_calls
+    // present on an abnormal finish (or a custom-tool call) were never
+    // extracted/executed, so echoing them here would leave an unanswered
+    // tool_call_id in the transcript and make the next API request invalid.
+    const functionToolCalls =
+      response.choices[0]?.finish_reason === 'tool_calls'
+        ? (message?.tool_calls?.filter(isFunctionToolCall) ?? [])
+        : [];
     return {
       role: 'assistant',
       content: message?.content ?? null,

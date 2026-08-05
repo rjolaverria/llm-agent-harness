@@ -134,6 +134,19 @@ describe('openaiBinding', () => {
     ]);
   });
 
+  it('omits tool_calls entirely when finish_reason is length, even though function tool_calls are present', () => {
+    const msg = openaiBinding.toAssistantMessage(lengthWithToolCalls) as { tool_calls?: unknown[] };
+    expect(msg).not.toHaveProperty('tool_calls');
+    expect(msg).toMatchObject({ role: 'assistant', content: null });
+  });
+
+  it('omits tool_calls entirely when finish_reason is content_filter, even though function tool_calls are present', () => {
+    const msg = openaiBinding.toAssistantMessage(contentFilterWithToolCalls) as {
+      tool_calls?: unknown[];
+    };
+    expect(msg).not.toHaveProperty('tool_calls');
+  });
+
   it('omits tool_calls entirely when the only calls present are custom', () => {
     const customOnly = completion(
       {
