@@ -12,6 +12,17 @@ function functionCallParts(response: GenerateContentResponse) {
 
 export const geminiBinding: ProviderBinding<GenerateContentResponse, Content> = {
   extractToolCalls(response) {
+    // Only a finishReason of 'STOP' guarantees a well-formed, complete set of
+    // functionCall parts. Other finish reasons (e.g. 'MAX_TOKENS',
+    // 'MALFORMED_FUNCTION_CALL', 'UNEXPECTED_TOOL_CALL') can still carry a
+    // functionCall part that is incomplete or unsafe to run. finishReason is
+    // typed as the FinishReason enum, but this binding only imports
+    // @google/genai's types (never its runtime value exports), so compare
+    // against the string value rather than importing the enum itself.
+    const finishReason: string | undefined = response.candidates?.[0]?.finishReason;
+    if (finishReason !== 'STOP') {
+      return [];
+    }
     return functionCallParts(response).map((part, index) => {
       const call = part.functionCall!;
       const name = call.name ?? '';

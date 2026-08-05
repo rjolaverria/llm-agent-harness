@@ -32,11 +32,49 @@ const toolCallResponse = completion(
 
 const finalResponse = completion({ role: 'assistant', content: 'Sunny.' }, 'stop');
 
+const lengthWithToolCalls = completion(
+  {
+    role: 'assistant',
+    content: null,
+    tool_calls: [
+      {
+        id: 'call_1',
+        type: 'function',
+        function: { name: 'get_weather', arguments: '{"location":"SF"}' },
+      },
+    ],
+  },
+  'length',
+);
+
+const contentFilterWithToolCalls = completion(
+  {
+    role: 'assistant',
+    content: null,
+    tool_calls: [
+      {
+        id: 'call_1',
+        type: 'function',
+        function: { name: 'get_weather', arguments: '{"location":"SF"}' },
+      },
+    ],
+  },
+  'content_filter',
+);
+
 describe('openaiBinding', () => {
   it('extracts tool calls and JSON-parses the string arguments', () => {
     expect(openaiBinding.extractToolCalls(toolCallResponse)).toEqual([
       { toolCallId: 'call_1', toolName: 'get_weather', rawArgs: { location: 'SF' } },
     ]);
+  });
+
+  it('does not extract tool calls when finish_reason is length, even if tool_calls are present', () => {
+    expect(openaiBinding.extractToolCalls(lengthWithToolCalls)).toEqual([]);
+  });
+
+  it('does not extract tool calls when finish_reason is content_filter, even if tool_calls are present', () => {
+    expect(openaiBinding.extractToolCalls(contentFilterWithToolCalls)).toEqual([]);
   });
 
   it('passes unparseable argument strings through for validation to reject', () => {
@@ -68,6 +106,45 @@ describe('openaiBinding', () => {
     const msg = openaiBinding.toAssistantMessage(toolCallResponse);
     expect(msg).toMatchObject({ role: 'assistant', content: null });
     expect((msg as { tool_calls: unknown[] }).tool_calls).toHaveLength(1);
+  });
+
+  it('folds only function tool_calls into the assistant message, dropping custom tool_calls', () => {
+    const mixed = completion(
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [
+          {
+            id: 'call_1',
+            type: 'function',
+            function: { name: 'get_weather', arguments: '{"location":"SF"}' },
+          },
+          { id: 'call_2', type: 'custom', custom: { name: 'shell', input: 'ls' } },
+        ],
+      },
+      'tool_calls',
+    );
+    const msg = openaiBinding.toAssistantMessage(mixed) as { tool_calls?: unknown[] };
+    expect(msg.tool_calls).toEqual([
+      {
+        id: 'call_1',
+        type: 'function',
+        function: { name: 'get_weather', arguments: '{"location":"SF"}' },
+      },
+    ]);
+  });
+
+  it('omits tool_calls entirely when the only calls present are custom', () => {
+    const customOnly = completion(
+      {
+        role: 'assistant',
+        content: null,
+        tool_calls: [{ id: 'call_2', type: 'custom', custom: { name: 'shell', input: 'ls' } }],
+      },
+      'tool_calls',
+    );
+    const msg = openaiBinding.toAssistantMessage(customOnly) as { tool_calls?: unknown[] };
+    expect(msg).not.toHaveProperty('tool_calls');
   });
 
   it('formats tool results as one role:tool message per call', () => {

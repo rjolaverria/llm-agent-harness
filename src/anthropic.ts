@@ -6,6 +6,12 @@ import type { AnyToolDefinition } from './tool.js';
 
 export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.MessageParam> = {
   extractToolCalls(response) {
+    // Only a stop_reason of 'tool_use' guarantees a well-formed, complete set
+    // of tool_use blocks. Other stop reasons (e.g. 'max_tokens', 'refusal')
+    // can still carry a tool_use block that is incomplete or unsafe to run.
+    if (response.stop_reason !== 'tool_use') {
+      return [];
+    }
     return response.content
       .filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use')
       .map((block) => ({ toolCallId: block.id, toolName: block.name, rawArgs: block.input }));

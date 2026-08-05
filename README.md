@@ -137,6 +137,9 @@ import type { AnyToolDefinition } from './tool.js';
 
 export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.MessageParam> = {
   extractToolCalls(response) {
+    if (response.stop_reason !== 'tool_use') {
+      return [];
+    }
     return response.content
       .filter((block): block is Anthropic.ToolUseBlock => block.type === 'tool_use')
       .map((block) => ({ toolCallId: block.id, toolName: block.name, rawArgs: block.input }));
@@ -175,17 +178,21 @@ export function toAnthropicTools(tools: readonly AnyToolDefinition[]): Anthropic
 
 Walking through it:
 
-- **`extractToolCalls`** — Anthropic puts tool calls in `response.content` as
-  `tool_use` blocks alongside any text blocks. Filter for `type ===
-'tool_use'` and map each block's `id`/`name`/`input` onto the harness's
-  neutral `ToolCallRequest` shape. No parsing needed — Anthropic's `input` is
-  already a structured object.
+- **`extractToolCalls`** — gated on `stop_reason === 'tool_use'` first: any
+  other stop reason returns `[]` even if a `tool_use` block happens to be
+  present, because an abnormal finish (`max_tokens`, `refusal`, ...) can carry
+  an incomplete or unsafe tool call that shouldn't be executed. Only once that
+  guard passes does it filter `response.content` for `type === 'tool_use'` and
+  map each block's `id`/`name`/`input` onto the harness's neutral
+  `ToolCallRequest` shape. No parsing needed — Anthropic's `input` is already a
+  structured object.
 - **`isDone`** — Anthropic sets `stop_reason: 'end_turn'` when the model is
   finished talking. Any other stop reason (`tool_use`, `max_tokens`,
   `stop_sequence`) means "not done" as far as the harness is concerned; the
   loop's own logic (see below) additionally treats "no tool calls extracted"
-  as terminal, which covers `max_tokens` truncation gracefully instead of
-  spinning forever.
+  as terminal, which — combined with the `extractToolCalls` gate above —
+  covers `max_tokens` truncation and other abnormal finishes gracefully
+  instead of spinning forever or running an unsafe call.
 - **`toAssistantMessage`** — fold the raw response into history exactly as
   Anthropic's own multi-turn API expects it: `{ role: 'assistant', content:
 response.content }`, content blocks (text and tool_use) included verbatim.
@@ -211,6 +218,14 @@ with different plumbing:
 | **OpenAI** (Chat Completions) | `message.tool_calls`, arguments as a JSON _string_      | `finish_reason === 'stop'`                                                                                                         | one `role: 'tool'` message per call, keyed by `tool_call_id`                                              |
 | **Gemini**                    | `functionCall` parts in the candidate's `content.parts` | _absence_ of `functionCall` parts (Gemini reports `finishReason: STOP` even on tool-call turns, so that field alone is unreliable) | one `user` message with `functionResponse` parts, each wrapping the result as `{ result }` or `{ error }` |
 
+Every shipped binding's `extractToolCalls` is gated on its provider's own
+"this is a well-formed tool-call turn" signal (`stop_reason === 'tool_use'`
+for Anthropic, `finish_reason === 'tool_calls'` for OpenAI, `finishReason ===
+'STOP'` for Gemini) and returns `[]` for anything else, even if a tool-call
+shape happens to be present in the response. An abnormal finish therefore
+never executes a tool — it becomes a terminal turn (`reason: 'done'`) for the
+caller to inspect via `lastResponse`.
+
 Two provider quirks worth calling out because they're easy to miss when
 writing your own binding:
 
@@ -218,6 +233,10 @@ writing your own binding:
   runs `JSON.parse` on `call.function.arguments` before handing `rawArgs` to
   the harness; a parse failure is passed through as the raw string so
   schema validation rejects it visibly instead of the binding swallowing it.
+  Relatedly, `toAssistantMessage` folds only `type: 'function'` tool_calls
+  into history — the same ones `extractToolCalls`/execution act on — so a
+  mixed function-and-custom-tool response never echoes a custom tool_call_id
+  that would go unanswered on the next request.
 - **Gemini's tool-call `id` is optional.** When Gemini omits
   `functionCall.id`, `geminiBinding` synthesizes a `name-index` id per call
   and echoes it back in the matching `functionResponse.id`. This is accepted
@@ -290,7 +309,10 @@ special-case "the last response isn't in the array yet."
 
 - `'done'` — the model produced a plain answer (`binding.isDone` was true, or
   no tool calls were extracted at all — which also covers abnormal finishes
-  like `max_tokens` truncation; inspect `lastResponse` to tell the two apart).
+  like `max_tokens` truncation or a refused/filtered response that happened to
+  carry a tool-call shape; shipped bindings only extract tool calls from a
+  well-formed tool-call turn, so any other finish reason ends the run here
+  too; inspect `lastResponse` to tell these cases apart).
 - `'max_turns'` — `maxTurns` was reached before the model finished.
 - `'max_tool_errors'` — more than `maxToolErrors` tool calls came back as
   errors across the run.

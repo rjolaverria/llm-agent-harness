@@ -25,11 +25,29 @@ const finalResponse = {
   content: [{ type: 'text', text: 'Sunny.', citations: null }],
 } as unknown as Anthropic.Message;
 
+const maxTokensWithToolUse = {
+  ...toolUseResponse,
+  stop_reason: 'max_tokens',
+} as unknown as Anthropic.Message;
+
+const refusalWithToolUse = {
+  ...toolUseResponse,
+  stop_reason: 'refusal',
+} as unknown as Anthropic.Message;
+
 describe('anthropicBinding', () => {
   it('extracts tool_use blocks', () => {
     expect(anthropicBinding.extractToolCalls(toolUseResponse)).toEqual([
       { toolCallId: 'toolu_1', toolName: 'get_weather', rawArgs: { location: 'SF' } },
     ]);
+  });
+
+  it('does not extract tool calls when stop_reason is max_tokens, even if a tool_use block is present', () => {
+    expect(anthropicBinding.extractToolCalls(maxTokensWithToolUse)).toEqual([]);
+  });
+
+  it('does not extract tool calls when stop_reason is refusal, even if a tool_use block is present', () => {
+    expect(anthropicBinding.extractToolCalls(refusalWithToolUse)).toEqual([]);
   });
 
   it('is done on end_turn, not on tool_use', () => {
@@ -98,5 +116,28 @@ describe('anthropicBinding', () => {
     expect(result.reason).toBe('done');
     expect(result.messages).toHaveLength(4); // user, assistant(tool_use), user(tool_result), assistant(final)
     expectTypeOf(result.lastResponse).toEqualTypeOf<Anthropic.Message | undefined>();
+  });
+
+  it('treats an abnormal finish carrying a tool_use block as terminal, without executing it', async () => {
+    let executed = false;
+    const weather = tool({
+      name: 'get_weather',
+      description: 'Get weather',
+      schema: z.object({ location: z.string() }),
+      jsonSchema: { type: 'object', properties: { location: { type: 'string' } } },
+      execute: ({ location }) => {
+        executed = true;
+        return `72°F in ${location}`;
+      },
+    });
+    const result = await runAgent({
+      binding: anthropicBinding,
+      callModel: () => Promise.resolve(maxTokensWithToolUse),
+      tools: [weather],
+      initialMessages: [{ role: 'user', content: 'Weather in SF?' }],
+    });
+    expect(executed).toBe(false);
+    expect(result.reason).toBe('done');
+    expect(result.lastResponse).toBe(maxTokensWithToolUse);
   });
 });

@@ -30,6 +30,12 @@ export const openaiBinding: ProviderBinding<
   OpenAI.ChatCompletionMessageParam
 > = {
   extractToolCalls(response) {
+    // Only a finish_reason of 'tool_calls' guarantees a well-formed, complete
+    // set of tool_calls. Other finish reasons (e.g. 'length', 'content_filter')
+    // can still carry tool_calls that are incomplete or unsafe to run.
+    if (response.choices[0]?.finish_reason !== 'tool_calls') {
+      return [];
+    }
     const toolCalls = response.choices[0]?.message.tool_calls ?? [];
     return toolCalls.filter(isFunctionToolCall).map((call) => ({
       toolCallId: call.id,
@@ -44,10 +50,15 @@ export const openaiBinding: ProviderBinding<
 
   toAssistantMessage(response) {
     const message = response.choices[0]?.message;
+    // Only fold function-type tool_calls, matching what executeToolCall
+    // actually runs. Custom-tool calls are filtered out of execution, so
+    // echoing them here would leave an unanswered tool_call_id in the
+    // transcript and make the next API request invalid.
+    const functionToolCalls = message?.tool_calls?.filter(isFunctionToolCall) ?? [];
     return {
       role: 'assistant',
       content: message?.content ?? null,
-      ...(message?.tool_calls ? { tool_calls: message.tool_calls } : {}),
+      ...(functionToolCalls.length > 0 ? { tool_calls: functionToolCalls } : {}),
     };
   },
 

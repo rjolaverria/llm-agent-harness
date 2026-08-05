@@ -5,9 +5,9 @@ import { geminiBinding, toGeminiTools } from '../src/gemini.js';
 import { runAgent } from '../src/run.js';
 import { tool } from '../src/tool.js';
 
-function response(parts: unknown[]): GenerateContentResponse {
+function response(parts: unknown[], finishReason = 'STOP'): GenerateContentResponse {
   return {
-    candidates: [{ content: { role: 'model', parts }, finishReason: 'STOP', index: 0 }],
+    candidates: [{ content: { role: 'model', parts }, finishReason, index: 0 }],
   } as unknown as GenerateContentResponse;
 }
 
@@ -16,11 +16,29 @@ const toolCallResponse = response([
 ]);
 const finalResponse = response([{ text: 'Sunny.' }]);
 
+const maxTokensWithFunctionCall = response(
+  [{ functionCall: { id: 'fc_1', name: 'get_weather', args: { location: 'SF' } } }],
+  'MAX_TOKENS',
+);
+
+const malformedFunctionCall = response(
+  [{ functionCall: { id: 'fc_1', name: 'get_weather', args: { location: 'SF' } } }],
+  'MALFORMED_FUNCTION_CALL',
+);
+
 describe('geminiBinding', () => {
   it('extracts functionCall parts', () => {
     expect(geminiBinding.extractToolCalls(toolCallResponse)).toEqual([
       { toolCallId: 'fc_1', toolName: 'get_weather', rawArgs: { location: 'SF' } },
     ]);
+  });
+
+  it('does not extract tool calls when finishReason is MAX_TOKENS, even if a functionCall part is present', () => {
+    expect(geminiBinding.extractToolCalls(maxTokensWithFunctionCall)).toEqual([]);
+  });
+
+  it('does not extract tool calls when finishReason is MALFORMED_FUNCTION_CALL, even if a functionCall part is present', () => {
+    expect(geminiBinding.extractToolCalls(malformedFunctionCall)).toEqual([]);
   });
 
   it('synthesizes a stable id when functionCall.id is missing', () => {
