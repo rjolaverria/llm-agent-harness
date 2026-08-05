@@ -95,8 +95,9 @@ normalized one. The only things `llm-agent-harness` adds are `runAgent`,
 `tool()`, and the `anthropicBinding`/`toAnthropicTools` pair that tells the
 loop how Anthropic's wire format works.
 
-(This snippet is compiled on every change against `tsconfig.examples.json` —
-see [`examples/readme-quickstart.ts`](./examples/readme-quickstart.ts).)
+(This snippet is mirrored verbatim in
+[`examples/readme-quickstart.ts`](./examples/readme-quickstart.ts) and
+typechecked via `npx tsc -p tsconfig.examples.json --noEmit`, wired into CI.)
 
 ## Build a binding from scratch
 
