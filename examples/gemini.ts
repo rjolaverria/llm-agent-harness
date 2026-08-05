@@ -30,8 +30,12 @@ async function main() {
   // configured and can silently fall through to ambient Google auth (e.g. a
   // gcloud ADC credential) instead of failing — read and check the key
   // ourselves so a missing key fails loudly instead of routing somewhere
-  // unexpected.
-  const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_API_KEY;
+  // unexpected. Take the first non-empty (trimmed) of the two vars: an
+  // empty-string GEMINI_API_KEY would pass a plain `?? ` check yet still be
+  // unusable, and would incorrectly block falling back to GOOGLE_API_KEY.
+  const apiKey = [process.env.GEMINI_API_KEY, process.env.GOOGLE_API_KEY]
+    .map((v) => v?.trim())
+    .find((v) => v !== undefined && v !== '');
   if (apiKey === undefined) {
     throw new Error('GEMINI_API_KEY (or GOOGLE_API_KEY) must be set to run this example.');
   }
