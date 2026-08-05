@@ -60,10 +60,19 @@ export const openaiBinding: ProviderBinding<
       response.choices[0]?.finish_reason === 'tool_calls'
         ? (message?.tool_calls?.filter(isFunctionToolCall) ?? [])
         : [];
+    const hasToolCalls = functionToolCalls.length > 0;
+    const content = message?.content ?? null;
+    // OpenAI requires content unless tool_calls is present. An abnormal
+    // finish (length, content_filter, ...) whose only content was tool_calls
+    // ends up here with content: null and no tool_calls (filtered out
+    // above), which OpenAI rejects on replay — fall back to a minimal
+    // placeholder string. Never reached when tool_calls survive the filter
+    // above, or when content already carries real text.
+    const safeContent = content === null && !hasToolCalls ? '[response truncated]' : content;
     return {
       role: 'assistant',
-      content: message?.content ?? null,
-      ...(functionToolCalls.length > 0 ? { tool_calls: functionToolCalls } : {}),
+      content: safeContent,
+      ...(hasToolCalls ? { tool_calls: functionToolCalls } : {}),
     };
   },
 

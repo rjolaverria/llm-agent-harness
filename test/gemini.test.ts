@@ -71,16 +71,16 @@ describe('geminiBinding', () => {
     expect(msg).toEqual({ role: 'model', parts: [{ text: 'Let me check.' }] });
   });
 
-  it('falls back to a single empty text part when an abnormal finish leaves nothing after filtering', () => {
+  it('folds a placeholder text part when an abnormal finish has only functionCall parts', () => {
     const msg = geminiBinding.toAssistantMessage(maxTokensWithFunctionCall);
-    expect(msg).toEqual({ role: 'model', parts: [{ text: '' }] });
+    expect(msg).toEqual({ role: 'model', parts: [{ text: '[response truncated]' }] });
   });
 
-  it('folds a non-empty single text part when candidates are empty', () => {
+  it('folds a placeholder text part when candidates are empty', () => {
     const empty = { candidates: [] } as unknown as GenerateContentResponse;
     expect(geminiBinding.toAssistantMessage(empty)).toEqual({
       role: 'model',
-      parts: [{ text: '' }],
+      parts: [{ text: '[response truncated]' }],
     });
   });
 

@@ -45,25 +45,24 @@ export const geminiBinding: ProviderBinding<GenerateContentResponse, Content> = 
     const content = response.candidates?.[0]?.content;
     if (content === undefined) {
       // No candidate content at all. Gemini rejects a model turn with zero
-      // parts on replay, so fall back to a single empty text part rather
-      // than an empty parts array (Part.text is optional/string per
-      // @google/genai's types, so an empty string is a valid, well-formed
-      // part).
-      return { role: 'model', parts: [{ text: '' }] };
+      // parts on replay, so fall back to a single non-empty text part
+      // instead of an empty parts array.
+      return { role: 'model', parts: [{ text: '[response truncated]' }] };
     }
 
     // Only a finishReason of 'STOP' means every functionCall part in this
     // response was actually extracted and executed (see extractToolCalls
     // above). On any other finish reason, folding a functionCall part into
     // history would leave it dangling/unanswered, so it's filtered out here,
-    // keeping text/other parts. If nothing survives the filter, fall back to
-    // the same non-empty-parts guard as the missing-candidate case above.
+    // keeping text/other parts. If nothing survives the filter (the turn's
+    // only content was functionCall parts), fall back to the same
+    // non-empty-parts placeholder as the missing-candidate case above.
     const finishReason: string | undefined = response.candidates?.[0]?.finishReason;
     if (finishReason === 'STOP') {
       return content;
     }
     const parts = (content.parts ?? []).filter((part) => part.functionCall === undefined);
-    return { ...content, parts: parts.length > 0 ? parts : [{ text: '' }] };
+    return { ...content, parts: parts.length > 0 ? parts : [{ text: '[response truncated]' }] };
   },
 
   toToolResultMessage(results: ToolResultItem[]) {

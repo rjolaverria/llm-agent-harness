@@ -134,17 +134,18 @@ describe('openaiBinding', () => {
     ]);
   });
 
-  it('omits tool_calls entirely when finish_reason is length, even though function tool_calls are present', () => {
+  it('folds a placeholder content string when finish_reason is length and content is only tool_calls', () => {
     const msg = openaiBinding.toAssistantMessage(lengthWithToolCalls) as { tool_calls?: unknown[] };
     expect(msg).not.toHaveProperty('tool_calls');
-    expect(msg).toMatchObject({ role: 'assistant', content: null });
+    expect(msg).toEqual({ role: 'assistant', content: '[response truncated]' });
   });
 
-  it('omits tool_calls entirely when finish_reason is content_filter, even though function tool_calls are present', () => {
+  it('folds a placeholder content string when finish_reason is content_filter and content is only tool_calls', () => {
     const msg = openaiBinding.toAssistantMessage(contentFilterWithToolCalls) as {
       tool_calls?: unknown[];
     };
     expect(msg).not.toHaveProperty('tool_calls');
+    expect(msg).toEqual({ role: 'assistant', content: '[response truncated]' });
   });
 
   it('omits tool_calls entirely when the only calls present are custom', () => {

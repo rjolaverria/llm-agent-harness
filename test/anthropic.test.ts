@@ -35,6 +35,12 @@ const refusalWithToolUse = {
   stop_reason: 'refusal',
 } as unknown as Anthropic.Message;
 
+const maxTokensToolOnly = {
+  ...toolUseResponse,
+  stop_reason: 'max_tokens',
+  content: [{ type: 'tool_use', id: 'toolu_1', name: 'get_weather', input: { location: 'SF' } }],
+} as unknown as Anthropic.Message;
+
 describe('anthropicBinding', () => {
   it('extracts tool_use blocks', () => {
     expect(anthropicBinding.extractToolCalls(toolUseResponse)).toEqual([
@@ -73,6 +79,13 @@ describe('anthropicBinding', () => {
     expect(anthropicBinding.toAssistantMessage(refusalWithToolUse)).toEqual({
       role: 'assistant',
       content: [{ type: 'text', text: 'Let me check.', citations: null }],
+    });
+  });
+
+  it('folds a placeholder text block when an abnormal finish has only tool_use content', () => {
+    expect(anthropicBinding.toAssistantMessage(maxTokensToolOnly)).toEqual({
+      role: 'assistant',
+      content: [{ type: 'text', text: '[response truncated]' }],
     });
   });
 

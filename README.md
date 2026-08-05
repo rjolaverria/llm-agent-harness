@@ -131,7 +131,7 @@ this) before handing them to you. `ToolResultItem` is
 `{ toolCallId, toolName, result: string, isError: boolean }`.
 
 Here is the entire shipped Anthropic binding, `src/anthropic.ts`, unabridged —
-about 45 lines once you strip comments:
+about 50 lines once you strip comments:
 
 ```ts
 import type Anthropic from '@anthropic-ai/sdk';
@@ -157,7 +157,9 @@ export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.Mess
       response.stop_reason === 'tool_use'
         ? response.content
         : response.content.filter((block) => block.type !== 'tool_use');
-    return { role: 'assistant', content };
+    const safeContent =
+      content.length > 0 ? content : [{ type: 'text' as const, text: '[response truncated]' }];
+    return { role: 'assistant', content: safeContent };
   },
 
   toToolResultMessage(results: ToolResultItem[]) {
@@ -207,7 +209,10 @@ response.content }`. On a normal `tool_use` turn every block (text and
   any other stop reason, `tool_use` blocks are filtered out before folding —
   echoing a tool call that was never executed would leave it unanswered and
   Anthropic rejects that on the next request — while text/other blocks are
-  kept.
+  kept. If that filtering leaves nothing (an abnormal turn whose content was
+  only `tool_use` blocks), a minimal placeholder text block is folded
+  instead of empty content, since Anthropic rejects empty content — and
+  empty/whitespace-only text blocks — on replay.
 - **`toToolResultMessage`** — Anthropic wants tool results back as a single
   `user` message containing one `tool_result` content block per call, each
   tagged with the `tool_use_id` it answers and an optional `is_error` flag.
@@ -436,7 +441,7 @@ for validation and unknown-tool errors, usually self-correct):
 | Tool `execute` throws                                            | Error tool result with the thrown error's message; **counts toward `maxToolErrors`**.                                                   |
 | `beforeToolCall` returns `{ block }`                             | Non-error tool result (the block string); **does not count** toward `maxToolErrors` — blocks are intentional, not failures.             |
 | `signal` aborts                                                  | The run resolves with `reason: 'aborted'` (never throws); forward the signal into `callModel` yourself to cut off an in-flight request. |
-| Binding or harness programming error (e.g. duplicate tool names) | Throws. Never swallowed.                                                                                                                |
+| Binding or harness programming error (e.g. duplicate tool names) | Rejects immediately. Never swallowed.                                                                                                   |
 
 `maxToolErrors` (default `5`) exists to stop infinite error ping-pong between
 the model and the harness: it's a per-run cap across the three counted cases

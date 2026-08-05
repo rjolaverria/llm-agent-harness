@@ -32,7 +32,14 @@ export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.Mess
       response.stop_reason === 'tool_use'
         ? response.content
         : response.content.filter((block) => block.type !== 'tool_use');
-    return { role: 'assistant', content };
+    // If an abnormal turn's content was only tool_use blocks, the filter
+    // above leaves an empty array — Anthropic rejects empty content on
+    // replay. Fall back to a minimal, non-empty text block (Anthropic also
+    // rejects empty/whitespace-only text blocks). Never reachable on a
+    // normal tool_use turn, since it always has at least one tool_use block.
+    const safeContent =
+      content.length > 0 ? content : [{ type: 'text' as const, text: '[response truncated]' }];
+    return { role: 'assistant', content: safeContent };
   },
 
   toToolResultMessage(results: ToolResultItem[]) {
