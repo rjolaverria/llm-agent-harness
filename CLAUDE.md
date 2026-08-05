@@ -13,7 +13,7 @@ llm-agent-loop    — agentLoop / agentLoopStream (dependency)
 provider SDK      — types + HTTP; the app calls it, the harness never does
 ```
 
-Positioning: "Keep your provider SDK. Keep your messages. Keep your architecture. Add a correct tool loop." It is **not** a smaller replacement for agent frameworks and must never grow toward one. The full design rationale lives in the project's Notion design doc (the canonical copy); a local `docs/design.md` may exist as uncommitted working notes (`docs/` is gitignored — see Task Workflow below) but is not itself the source of truth.
+Positioning: "Keep your provider SDK. Keep your messages. Keep your architecture. Add a correct tool loop." It is **not** a smaller replacement for agent frameworks and must never grow toward one. The full design rationale lives in the project's design notes, kept outside the repo; a local `docs/design.md` may exist as uncommitted working notes (`docs/` is gitignored — see Task Workflow below) but is not itself the source of truth.
 
 ## Non-Negotiable Design Constraints
 
@@ -23,7 +23,7 @@ Positioning: "Keep your provider SDK. Keep your messages. Keep your architecture
 - **The harness never performs network calls.** `callModel` belongs to the application.
 - **Model-visible error feedback.** Invalid tool args, unknown tools, and thrown `execute` functions become `isError` tool results the model can react to — they never throw. Programming errors always throw.
 - **Exactly two hooks** (`onStep`, `beforeToolCall`). New hooks need a reason the caller can't achieve through `callModel` ownership.
-- Scope discipline: structured output, streaming deltas, telemetry, MCP, approval subsystems, and DI-for-tools are explicitly out of scope for v1 (see the non-goals and roadmap in the project's Notion design doc, mirrored locally as uncommitted working notes under `docs/` when present).
+- Scope discipline: structured output, streaming deltas, telemetry, MCP, approval subsystems, and DI-for-tools are explicitly out of scope for v1 (see the non-goals and roadmap in the project's design notes, mirrored locally as uncommitted working notes under `docs/` when present).
 
 ## Commands
 
@@ -119,7 +119,7 @@ While working:
 
 - Keep each unit of work to its own set of commits. Do not bundle multiple unrelated changes into one commit.
 - If you discover follow-up work that is out of scope for the current change, track it separately rather than expanding the current change.
-- Design documents under `docs/` are working notes — do not commit them unless explicitly asked. The canonical project/design doc lives in Notion.
+- Design documents under `docs/` are working notes — do not commit them unless explicitly asked. The canonical project/design doc is kept outside the repo.
 
 A change is **only** complete when **all** of the following are true:
 
