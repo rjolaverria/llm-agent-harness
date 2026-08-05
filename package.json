@@ -1,6 +1,6 @@
 {
   "name": "llm-agent-harness",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Minimal tool-loop harness for LLM agents. Keep your provider SDK, keep your messages, add a correct tool loop.",
   "type": "module",
   "main": "dist/index.js",
