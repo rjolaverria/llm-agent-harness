@@ -131,7 +131,7 @@ this) before handing them to you. `ToolResultItem` is
 `{ toolCallId, toolName, result: string, isError: boolean }`.
 
 Here is the entire shipped Anthropic binding, `src/anthropic.ts`, unabridged —
-about 40 lines once you strip comments:
+about 45 lines once you strip comments:
 
 ```ts
 import type Anthropic from '@anthropic-ai/sdk';
@@ -153,7 +153,11 @@ export const anthropicBinding: ProviderBinding<Anthropic.Message, Anthropic.Mess
   },
 
   toAssistantMessage(response) {
-    return { role: 'assistant', content: response.content };
+    const content =
+      response.stop_reason === 'tool_use'
+        ? response.content
+        : response.content.filter((block) => block.type !== 'tool_use');
+    return { role: 'assistant', content };
   },
 
   toToolResultMessage(results: ToolResultItem[]) {
@@ -198,7 +202,12 @@ Walking through it:
   instead of spinning forever or running an unsafe call.
 - **`toAssistantMessage`** — fold the raw response into history exactly as
   Anthropic's own multi-turn API expects it: `{ role: 'assistant', content:
-response.content }`, content blocks (text and tool_use) included verbatim.
+response.content }`. On a normal `tool_use` turn every block (text and
+  tool_use) is included verbatim, matching what was actually executed; on
+  any other stop reason, `tool_use` blocks are filtered out before folding —
+  echoing a tool call that was never executed would leave it unanswered and
+  Anthropic rejects that on the next request — while text/other blocks are
+  kept.
 - **`toToolResultMessage`** — Anthropic wants tool results back as a single
   `user` message containing one `tool_result` content block per call, each
   tagged with the `tool_use_id` it answers and an optional `is_error` flag.
