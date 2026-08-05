@@ -476,6 +476,84 @@ Each `toXTools(tools)` helper maps your `tool()` definitions' `{ name,
 description, jsonSchema }` to that provider's wire format for the `tools`
 field of your own request — nothing more.
 
+## Recipe: structured output
+
+There is no `outputSchema` option, and there won't be one — you already have
+everything you need. Because `result.messages` is the complete transcript in
+your provider's own types, and `result.lastResponse` is your SDK's own
+response object, validating a typed final answer (and retrying when the
+model gets it wrong) is ordinary application code:
+
+```ts
+import { z } from 'zod';
+import { runAgent } from 'llm-agent-harness';
+
+const Report = z.object({ city: z.string(), tempF: z.number() });
+
+async function runStructured<T extends z.ZodType>(
+  schema: T,
+  options: Parameters<typeof runAgent<Anthropic.Message, Anthropic.MessageParam>>[0],
+  maxAttempts = 3,
+): Promise<z.infer<T>> {
+  let messages = options.initialMessages;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    const result = await runAgent({ ...options, initialMessages: messages });
+    const text = result.lastResponse?.content.find((b) => b.type === 'text')?.text ?? '';
+    const parsed = schema.safeParse(JSON.parse(text || '{}'));
+
+    if (parsed.success) {
+      return parsed.data;
+    }
+
+    // Hand the failure back to the model and let it correct itself, exactly
+    // like the harness does for invalid tool arguments.
+    const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
+    messages = [
+      ...result.messages,
+      { role: 'user', content: `Invalid output: ${issues}. Reply with valid JSON only.` },
+    ];
+  }
+
+  throw new Error(`No valid structured output after ${maxAttempts} attempts`);
+}
+```
+
+Two details make this work rather than fight you:
+
+- **Ask the provider for JSON in your own `callModel`.** Set
+  `response_format: { type: 'json_schema', … }` (OpenAI),
+  `config.responseSchema` (Gemini), or a schema-shaped tool (Anthropic) —
+  request construction is yours, so every provider's native structured-output
+  mode is available to you at full fidelity, including options this library
+  has never heard of.
+- **Extracting the text needs no abstraction.** `lastResponse` is
+  `Anthropic.Message` / `OpenAI.ChatCompletion` / `GenerateContentResponse` —
+  you read your own provider's shape directly, so there is nothing for a
+  binding to normalize.
+
+If you'd rather have the model _call_ a final-answer tool than emit JSON
+text, that's a plain `tool()` — no special support required:
+
+```ts
+let answer: z.infer<typeof Report> | undefined;
+
+const submitReport = tool({
+  name: 'submit_report',
+  description: 'Submit the final report. Call this when you have the answer.',
+  schema: Report,
+  jsonSchema: z.toJSONSchema(Report),
+  execute: (report) => {
+    answer = report; // validated by the harness before execute runs
+    return 'Report submitted.';
+  },
+});
+```
+
+Invalid arguments come back to the model as an error tool result and it
+retries on its own — the self-correction loop described under
+[Error handling](#error-handling), for free.
+
 ## Relationship to `llm-agent-loop`
 
 `llm-agent-harness` is built on top of
@@ -505,6 +583,10 @@ rationale lives in the project's design notes.
   need instead.
 - **A tool-approval subsystem.** `beforeToolCall` is the primitive; build
   policy on top of it.
-- **Structured output** and **streaming text deltas** — both are on the
-  post-v1 roadmap (additive; per-turn `onStep` observability exists from day
-  one, ahead of streaming).
+- **A structured-output feature.** Not a gap — because you own the request
+  and see your provider's own types, a typed-and-validated final answer with
+  model-visible retry is a dozen lines of your own code. See
+  [Recipe: structured output](#recipe-structured-output).
+- **Streaming text deltas.** Per-turn observability via `onStep` exists from
+  day one; token-level streaming would need each binding to grow a streaming
+  half, so it stays out until there's a concrete reason.
