@@ -95,9 +95,12 @@ normalized one. The only things `llm-agent-harness` adds are `runAgent`,
 `tool()`, and the `anthropicBinding`/`toAnthropicTools` pair that tells the
 loop how Anthropic's wire format works.
 
-(This snippet is mirrored verbatim in
-[`examples/readme-quickstart.ts`](./examples/readme-quickstart.ts) and
-typechecked via `npx tsc -p tsconfig.examples.json --noEmit`, wired into CI.)
+(This scenario is exercised live in
+[`examples/anthropic.ts`](./examples/anthropic.ts) — the same weather-tool
+call, wrapped in a runnable `main()` — and every file under `examples/` is
+typechecked via `npm run typecheck:examples`
+(`tsc -p tsconfig.examples.json --noEmit`), wired into CI. See
+[`examples/README.md`](./examples/README.md) to run it yourself.)
 
 ## Build a binding from scratch
 
