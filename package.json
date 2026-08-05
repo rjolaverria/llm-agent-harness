@@ -21,8 +21,10 @@
     "./gemini": {
       "types": "./dist/gemini.d.ts",
       "import": "./dist/gemini.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -96,6 +98,12 @@
   ],
   "author": "Rafi Olaverria",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rjolaverria/llm-agent-harness.git"
+  },
+  "bugs": "https://github.com/rjolaverria/llm-agent-harness/issues",
+  "homepage": "https://github.com/rjolaverria/llm-agent-harness#readme",
   "engines": {
     "node": ">=22.13.0"
   }

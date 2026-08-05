@@ -282,7 +282,7 @@ const result = await runAgent({
 | ----------------- | ------------------------------------------------------ | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `binding`         | `ProviderBinding<TResponse, TMessage>`                 | —               | Required. Also single-sources the types of `callModel` and `result.messages` — pass `anthropicBinding` and both are typed as Anthropic's own types, no casts.                                                                                                          |
 | `callModel`       | `(messages: TMessage[]) => Promise<TResponse>`         | —               | Required. Your provider call, in full — request options, model choice, and retries/auth/transport are entirely yours.                                                                                                                                                  |
-| `tools`           | `ToolDefinition[]`                                     | —               | Required. Duplicate tool names throw synchronously (a harness-level programming error, never swallowed).                                                                                                                                                               |
+| `tools`           | `ToolDefinition[]`                                     | —               | Required. Duplicate tool names reject immediately (a harness-level programming error, never swallowed).                                                                                                                                                                |
 | `initialMessages` | `TMessage[]`                                           | —               | Required. The starting transcript, in your provider's own message format.                                                                                                                                                                                              |
 | `maxTurns`        | `number`                                               | `10`            | Maximum model turns before the run stops with `reason: 'max_turns'`.                                                                                                                                                                                                   |
 | `maxToolErrors`   | `number`                                               | `5`             | Tolerated error tool results across the whole run; one more than this stops the run with `reason: 'max_tool_errors'`. See below for what counts.                                                                                                                       |
@@ -479,8 +479,8 @@ everything here is built from public pieces of it.
 
 ## Non-goals
 
-This library intentionally does not do the following (see `docs/design.md`
-for the full rationale):
+This library intentionally does not do the following. The full design
+rationale lives in the project's design notes.
 
 - **Provider abstraction / normalized messages.** Refusing this is the point
   of the design — you always see your provider's own types.
