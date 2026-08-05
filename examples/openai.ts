@@ -39,6 +39,14 @@ async function main() {
 
   const last = result.messages[result.messages.length - 1];
   console.log('final text:', last?.content);
+
+  // A smoke test that never calls the tool proves nothing about the tool
+  // loop — fail loudly instead of exiting 0 on a no-op run.
+  if (result.reason !== 'done' || result.toolCallsMade === 0) {
+    throw new Error(
+      `expected the loop to finish 'done' having made at least one tool call, got reason=${result.reason} toolCallsMade=${result.toolCallsMade}`,
+    );
+  }
 }
 
 main().catch((error: unknown) => {

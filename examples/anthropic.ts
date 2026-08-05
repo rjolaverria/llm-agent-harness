@@ -11,8 +11,6 @@ import { z } from 'zod';
 import { runAgent, tool } from '../src/index.js';
 import { anthropicBinding, toAnthropicTools } from '../src/anthropic.js';
 
-const client = new Anthropic();
-
 const weatherSchema = z.object({ location: z.string() });
 const weather = tool({
   name: 'get_weather',
@@ -23,6 +21,8 @@ const weather = tool({
 });
 
 async function main() {
+  const client = new Anthropic();
+
   const result = await runAgent({
     binding: anthropicBinding,
     callModel: (messages) =>
@@ -45,6 +45,14 @@ async function main() {
       ? last.content.find((block) => block.type === 'text')
       : undefined;
   console.log('final text:', textBlock?.text ?? last?.content);
+
+  // A smoke test that never calls the tool proves nothing about the tool
+  // loop — fail loudly instead of exiting 0 on a no-op run.
+  if (result.reason !== 'done' || result.toolCallsMade === 0) {
+    throw new Error(
+      `expected the loop to finish 'done' having made at least one tool call, got reason=${result.reason} toolCallsMade=${result.toolCallsMade}`,
+    );
+  }
 }
 
 main().catch((error: unknown) => {
