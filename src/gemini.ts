@@ -59,7 +59,14 @@ export const geminiBinding: ProviderBinding<GenerateContentResponse, Content> = 
     // non-empty-parts placeholder as the missing-candidate case above.
     const finishReason: string | undefined = response.candidates?.[0]?.finishReason;
     if (finishReason === 'STOP') {
-      return content;
+      // A STOP turn should carry real content, but a candidate with `parts`
+      // omitted or empty is still possible and would fold a zero-part model
+      // message, which Gemini rejects on replay — fall back to the same
+      // non-empty-parts placeholder used below.
+      if (content.parts !== undefined && content.parts.length > 0) {
+        return content;
+      }
+      return { ...content, parts: [{ text: '[response truncated]' }] };
     }
     const parts = (content.parts ?? []).filter((part) => part.functionCall === undefined);
     return { ...content, parts: parts.length > 0 ? parts : [{ text: '[response truncated]' }] };

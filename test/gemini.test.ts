@@ -34,6 +34,8 @@ const maxTokensWithTextAndFunctionCall = response(
   'MAX_TOKENS',
 );
 
+const stopWithEmptyParts = response([], 'STOP');
+
 describe('geminiBinding', () => {
   it('extracts functionCall parts', () => {
     expect(geminiBinding.extractToolCalls(toolCallResponse)).toEqual([
@@ -73,6 +75,11 @@ describe('geminiBinding', () => {
 
   it('folds a placeholder text part when an abnormal finish has only functionCall parts', () => {
     const msg = geminiBinding.toAssistantMessage(maxTokensWithFunctionCall);
+    expect(msg).toEqual({ role: 'model', parts: [{ text: '[response truncated]' }] });
+  });
+
+  it('folds a placeholder text part when a STOP turn has empty parts', () => {
+    const msg = geminiBinding.toAssistantMessage(stopWithEmptyParts);
     expect(msg).toEqual({ role: 'model', parts: [{ text: '[response truncated]' }] });
   });
 
